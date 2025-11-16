@@ -1,0 +1,162 @@
+#!/bin/bash
+
+# Скрипт для компиляции и запуска экспериментов по сортировке
+# Автоматизирует весь процесс: компиляция, запуск, визуализация
+
+set -e  # Завершить выполнение при любой ошибке
+
+echo "=================================================="
+echo "ЗАПУСК ЭКСПЕРИМЕНТОВ ПО АЛГОРИТМАМ СОРТИРОВКИ"
+echo "=================================================="
+
+# Создание директорий для результатов
+mkdir -p results
+cd results
+
+# Шаг 1: Компиляция C++ кода
+echo ""
+echo "ШАГ 1: КОМПИЛЯЦИЯ C++ КОДА..."
+echo "--------------------------------------------------"
+
+if command -v g++ &> /dev/null; then
+    echo "Используется g++..."
+    g++ -std=c++11 -O2 -Wall ../*.cpp -o sorting_experiment
+elif command -v clang++ &> /dev/null; then
+    echo "Используется clang++..."
+    clang++ -std=c++11 -O2 -Wall ../*.cpp -o sorting_experiment
+else
+    echo "ОШИБКА: Не найден компилятор C++!"
+    exit 1
+fi
+
+echo "Компиляция завершена успешно!"
+
+# Шаг 2: Запуск экспериментов
+echo ""
+echo "ШАГ 2: ЗАПУСК ЭКСПЕРИМЕНТОВ..."
+echo "--------------------------------------------------"
+
+if [ ! -f "./sorting_experiment" ]; then
+    echo "ОШИБКА: Исполняемый файл не найден!"
+    exit 1
+fi
+
+echo "Запуск программы экспериментов..."
+./sorting_experiment
+
+# Проверка создания CSV файлов
+required_files=("standard_random.csv" "standard_reverse.csv" "standard_almost.csv" 
+                "hybrid_random.csv" "hybrid_reverse.csv" "hybrid_almost.csv" 
+                "threshold_test.csv")
+
+all_files_exist=true
+for file in "${required_files[@]}"; do
+    if [ ! -f "$file" ]; then
+        echo "ПРЕДУПРЕЖДЕНИЕ: Файл $file не создан!"
+        all_files_exist=false
+    fi
+done
+
+if [ "$all_files_exist" = true ]; then
+    echo "Все данные экспериментов успешно сохранены!"
+else
+    echo "Некоторые файлы данных отсутствуют!"
+fi
+
+# Шаг 3: Визуализация результатов
+echo ""
+echo "ШАГ 3: ВИЗУАЛИЗАЦИЯ РЕЗУЛЬТАТОВ..."
+echo "--------------------------------------------------"
+
+# Проверка установки Python
+if ! command -v python3 &> /dev/null; then
+    echo "ОШИБКА: Python3 не установлен!"
+    echo "Установите Python3 для визуализации результатов"
+    exit 1
+fi
+
+# Проверка необходимых библиотек Python
+echo "Проверка необходимых библиотек Python..."
+python3 -c "import pandas, matplotlib, seaborn" 2>/dev/null || {
+    echo "Установка необходимых библиотек Python..."
+    pip3 install pandas matplotlib seaborn --user || {
+        echo "ОШИБКА: Не удалось установить библиотеки Python!"
+        echo "Установите вручную: pip install pandas matplotlib seaborn"
+        exit 1
+    }
+}
+
+echo "Запуск скрипта визуализации..."
+cp ../plot_results.py .
+python3 plot_results.py
+
+# Шаг 4: Создание финального отчета
+echo ""
+echo "ШАГ 4: СОЗДАНИЕ ОТЧЕТА..."
+echo "--------------------------------------------------"
+
+# Создание README с результатами
+cat > README.md << EOF
+# Результаты экспериментов по алгоритмам сортировки
+
+## Описание экспериментов
+- **Алгоритмы**: Standard Merge Sort vs Hybrid Merge Sort
+- **Размеры массивов**: 500 - 100000 элементов с шагом 100
+- **Типы данных**: случайные, обратно отсортированные, почти отсортированные
+- **Порог переключения**: 10 элементов (для гибридного алгоритма)
+
+## Сгенерированные файлы
+
+### Данные
+- \`standard_*.csv\` - результаты стандартного Merge Sort
+- \`hybrid_*.csv\` - результаты гибридного алгоритма  
+- \`threshold_test.csv\` - анализ оптимального порога
+
+### Графики
+- \`comparison_results.png\` - сравнение алгоритмов
+- \`individual_results.png\` - отдельные графики
+- \`threshold_analysis.png\` - анализ порога
+- \`log_scale_results.png\` - логарифмические графики
+
+### Отчеты
+- \`experiment_report.txt\` - текстовый отчет
+
+## Запуск
+Для повторного запуска визуализации:
+\`\`\`bash
+python3 plot_results.py
+\`\`\`
+EOF
+
+echo "Создан файл README.md с описанием результатов"
+
+# Шаг 5: Архивирование результатов
+echo ""
+echo "ШАГ 5: АРХИВИРОВАНИЕ РЕЗУЛЬТАТОВ..."
+echo "--------------------------------------------------"
+
+timestamp=$(date +"%Y%m%d_%H%M%S")
+archive_name="sorting_experiment_results_${timestamp}.tar.gz"
+
+tar -czf "../${archive_name}" ./*.csv ./*.png ./*.txt README.md 2>/dev/null || {
+    echo "Предупреждение: Не удалось создать архив некоторых файлов"
+    # Пробуем создать архив только с существующими файлами
+    tar -czf "../${archive_name}" ./*.csv ./*.png ./*.txt README.md 2>/dev/null || true
+}
+
+if [ -f "../${archive_name}" ]; then
+    echo "Результаты сохранены в архив: ../${archive_name}"
+else
+    echo "Не удалось создать архив результатов"
+fi
+
+echo ""
+echo "=================================================="
+echo "ЭКСПЕРИМЕНТЫ УСПЕШНО ЗАВЕРШЕНЫ!"
+echo "=================================================="
+echo ""
+echo "Для просмотра результатов откройте файлы:"
+echo "- results/comparison_results.png"
+echo "- results/experiment_report.txt"
+echo ""
+echo "Архив с результатами: ${archive_name}"
