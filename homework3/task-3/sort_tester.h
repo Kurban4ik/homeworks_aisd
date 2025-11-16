@@ -21,7 +21,6 @@ private:
 
     std::vector<TestResult> results;
 
-    // Проверка корректности сортировки
     static bool isSorted(const std::vector<int>& arr) {
         for (size_t i = 1; i < arr.size(); i++) {
             if (arr[i] < arr[i - 1]) {
@@ -31,13 +30,11 @@ private:
         return true;
     }
 
-    // Копирование массива для тестирования
     static std::vector<int> copyArray(const std::vector<int>& original) {
         return std::vector<int>(original);
     }
 
 public:
-    // Тестирование одного алгоритма на одном наборе данных
     template<typename SortFunction>
     TestResult testAlgorithm(SortFunction sortFunc, const std::string& algoName, 
                            const std::vector<int>& originalData, const std::string& dataType) {
@@ -46,21 +43,17 @@ public:
         result.dataType = dataType;
         result.size = originalData.size();
 
-        // Копируем данные для тестирования
         std::vector<int> testData = copyArray(originalData);
 
-        // Замер времени
         auto start = std::chrono::high_resolution_clock::now();
         
         sortFunc(testData);
         
         auto end = std::chrono::high_resolution_clock::now();
         
-        // Вычисляем время в миллисекундах
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
         result.timeMs = duration.count() / 1000.0;
         
-        // Проверяем корректность сортировки
         result.sortedCorrectly = isSorted(testData);
 
         return result;
@@ -115,7 +108,6 @@ public:
         }
     }
 
-    // Сохранение результатов в CSV файл
     void saveResultsToCSV(const std::string& filename) {
         std::ofstream file(filename);
         file << "Algorithm,DataType,Size,TimeMs,Correct\n";
@@ -144,7 +136,6 @@ public:
         }
     }
 
-    // Получение всех результатов
     const std::vector<TestResult>& getResults() const {
         return results;
     }
